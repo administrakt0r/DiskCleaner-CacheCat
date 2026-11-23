@@ -32,7 +32,7 @@ XPM_PATH = Path(__file__).with_name("cachecat.xpm")
 
 
 class App(Gtk.Window):
-    def __init__(self):
+    def __init__(self, auto_start=True):
         super().__init__(title="CacheCat · Disk Cleaner")
         apply_custom_theme()
 
@@ -133,13 +133,15 @@ class App(Gtk.Window):
         self.btn_select_safe.connect("clicked", lambda _: self.select_safe())
         btn_box.pack_start(self.btn_select_safe, False, False, 0)
 
-        btn_select_all = Gtk.Button(label="All")
-        btn_select_all.connect("clicked", lambda _: self.select_all())
-        btn_box.pack_start(btn_select_all, False, False, 0)
+        self.btn_select_all = Gtk.Button(label="All")
+        self.btn_select_all.connect("clicked", lambda _: self.select_all())
+        btn_box.pack_start(self.btn_select_all, False, False, 0)
 
-        btn_deselect_all = Gtk.Button(label="None")
-        btn_deselect_all.connect("clicked", lambda _: self.deselect_all())
-        btn_box.pack_start(btn_deselect_all, False, False, 0)
+        self.btn_deselect_all = Gtk.Button(label="None")
+        self.btn_deselect_all.connect("clicked", lambda _: self.deselect_all())
+        btn_box.pack_start(self.btn_deselect_all, False, False, 0)
+
+        self.actions_bar = actions_bar
 
         # ------------------ Progress & Status ------------------
         self.progress = Gtk.ProgressBar()
@@ -252,7 +254,10 @@ class App(Gtk.Window):
 
         # Active animation ticker timer
         self.anim_timer = GLib.timeout_add(150, self.anim_tick)
-        self.start()
+        self.scan_timer = None
+        self.cancel = None
+        if auto_start:
+            self.start()
 
     def _set_pointer_cursor(self, widget):
         window = widget.get_window()
@@ -260,10 +265,16 @@ class App(Gtk.Window):
             window.set_cursor(Gdk.Cursor.new_from_name(Gdk.Display.get_default(), "pointer"))
 
     def on_window_destroy(self, *_):
+        if hasattr(self, "cancel") and self.cancel:
+            self.cancel.set()
+        if hasattr(self, "scan_timer") and self.scan_timer:
+            GLib.source_remove(self.scan_timer)
+            self.scan_timer = None
         if hasattr(self, "anim_timer") and self.anim_timer:
             GLib.source_remove(self.anim_timer)
             self.anim_timer = None
-        Gtk.main_quit()
+        if Gtk.main_level() > 0:
+            Gtk.main_quit()
 
     def anim_tick(self):
         if Gtk.Settings.get_default().get_property("gtk-enable-animations"):
@@ -314,13 +325,23 @@ class App(Gtk.Window):
             self.popover.meow("All safe caches selected! Ready for a quick clean.")
 
     def select_all(self):
-        for row in self.model:
-            row[0] = True
+        if self.active_filter != "All" or self.search_entry.get_text().strip():
+            for filter_row in self.filter_model:
+                child_iter = self.filter_model.convert_iter_to_child_iter(filter_row.iter)
+                self.model.set_value(child_iter, 0, True)
+        else:
+            for row in self.model:
+                row[0] = True
         self.update_selection_summary()
 
     def deselect_all(self):
-        for row in self.model:
-            row[0] = False
+        if self.active_filter != "All" or self.search_entry.get_text().strip():
+            for filter_row in self.filter_model:
+                child_iter = self.filter_model.convert_iter_to_child_iter(filter_row.iter)
+                self.model.set_value(child_iter, 0, False)
+        else:
+            for row in self.model:
+                row[0] = False
         self.update_selection_summary()
 
     def update_trash_status(self):
@@ -354,7 +375,8 @@ class App(Gtk.Window):
     def update_selection_summary(self):
         chosen = [r[5] for r in self.model if r[0]]
         total = sum(chosen)
-        self.clean.set_sensitive(bool(chosen))
+        is_scanning = hasattr(self, "refresh") and not self.refresh.get_sensitive()
+        self.clean.set_sensitive(bool(chosen) and not is_scanning)
         self.clean.set_label(f"Review selection ({size(total)})" if chosen else "Review selection")
         self.refresh_capacity()
 
@@ -404,7 +426,10 @@ class App(Gtk.Window):
         target = self.get_selected_path()
         if not target:
             return
-        p = Path(target)
+        if target == "All downloaded APT packages (administrator)":
+            p = Path("/var/cache/apt/archives")
+        else:
+            p = Path(target)
         if not p.exists():
             self.dialog(f"Location does not exist: {target}")
             return
@@ -412,7 +437,10 @@ class App(Gtk.Window):
         try:
             Gio.AppInfo.launch_default_for_uri(folder.as_uri(), None)
         except Exception:
-            subprocess.Popen(["xdg-open", str(folder)])
+            try:
+                subprocess.Popen(["xdg-open", str(folder)])
+            except OSError:
+                pass
 
     def on_copy_selected_path(self, *_):
         target = self.get_selected_path()
@@ -443,6 +471,9 @@ class App(Gtk.Window):
         self.stop.set_sensitive(True)
         self.stop.show()
         self.options.set_sensitive(False)
+        self.btn_select_safe.set_sensitive(False)
+        self.btn_select_all.set_sensitive(False)
+        self.btn_deselect_all.set_sensitive(False)
         self.progress.show()
         self.model.clear()
         self.clean.set_label("Review selection")
@@ -508,6 +539,9 @@ class App(Gtk.Window):
         self.progress.hide()
         self.stop.hide()
         self.options.set_sensitive(True)
+        self.btn_select_safe.set_sensitive(True)
+        self.btn_select_all.set_sensitive(True)
+        self.btn_deselect_all.set_sensitive(True)
 
     def failed(self, error):
         self.stop_progress()
@@ -539,7 +573,9 @@ class App(Gtk.Window):
             self.detail.hide()
             return
         row = model[selected]
-        self.detail.set_markup(f"<b>{row[7]}</b> · {row[10]}  —  {row[9]}")
+        app_escaped = GLib.markup_escape_text(row[7])
+        reason_escaped = GLib.markup_escape_text(row[9])
+        self.detail.set_markup(f"<b>{app_escaped}</b> · {row[10]}  —  {reason_escaped}")
         self.detail.show()
 
     def loaded(self, rows, errors):

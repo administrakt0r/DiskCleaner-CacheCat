@@ -254,20 +254,46 @@ def empty_trash():
     """Permanently deletes items inside Trash files and info directories."""
     deleted = 0
     freed = 0
-    for subdir in ("files", "info"):
-        target_dir = TRASH / subdir
-        if target_dir.is_dir():
-            for item in target_dir.iterdir():
+    files_dir = TRASH / "files"
+    if files_dir.is_dir():
+        try:
+            for item in files_dir.iterdir():
                 try:
                     s = item.stat(follow_symlinks=False)
-                    freed += s.st_size
+                    item_bytes = s.st_size
+                    if item.is_dir(follow_symlinks=False):
+                        dir_bytes = 0
+                        for root, _, files in os.walk(item):
+                            for f in files:
+                                try:
+                                    dir_bytes += os.path.getsize(os.path.join(root, f))
+                                except OSError:
+                                    pass
+                        item_bytes = max(s.st_size, dir_bytes)
+                        shutil.rmtree(item)
+                    else:
+                        item.unlink()
+                    freed += item_bytes
+                    deleted += 1
+                except OSError:
+                    pass
+        except OSError:
+            pass
+
+    info_dir = TRASH / "info"
+    if info_dir.is_dir():
+        try:
+            for item in info_dir.iterdir():
+                try:
                     if item.is_dir(follow_symlinks=False):
                         shutil.rmtree(item)
                     else:
                         item.unlink()
-                    deleted += 1
                 except OSError:
                     pass
+        except OSError:
+            pass
+
     return deleted, freed
 
 

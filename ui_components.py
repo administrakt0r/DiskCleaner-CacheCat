@@ -140,6 +140,12 @@ class DiskUsageBar(Gtk.Box):
         self.pack_start(self.area, False, False, 0)
         
         self.anim_timer = None
+        self.connect("destroy", self._on_destroy)
+
+    def _on_destroy(self, *_):
+        if self.anim_timer is not None:
+            GLib.source_remove(self.anim_timer)
+            self.anim_timer = None
 
     def set_capacity(self, used_bytes: int, free_bytes: int, selected_bytes: int = 0):
         self.used_bytes = max(0, used_bytes)
@@ -243,9 +249,16 @@ class CuteSpeechPopover(Gtk.Popover):
         box.pack_start(self.label, True, True, 0)
         self.get_style_context().add_class("cat-speech-bubble")
         self.auto_timer = None
+        self.connect("destroy", self._on_destroy)
+
+    def _on_destroy(self, *_):
+        if self.auto_timer is not None:
+            GLib.source_remove(self.auto_timer)
+            self.auto_timer = None
 
     def meow(self, text: str):
-        self.label.set_markup(f"🐾 <i>\"{text}\"</i>")
+        escaped = GLib.markup_escape_text(text)
+        self.label.set_markup(f"🐾 <i>\"{escaped}\"</i>")
         self.show_all()
         if self.auto_timer:
             GLib.source_remove(self.auto_timer)
