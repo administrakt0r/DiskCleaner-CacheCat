@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Uninstall CacheCat
+Comment=Remove this copy of CacheCat
+Exec="/home/q/Desktop/DiskCleaner/uninstall.sh"
+Icon=edit-delete
+Terminal=true
+Categories=Utility;

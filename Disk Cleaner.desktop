@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CacheCat Disk Cleaner
+Comment=Review disk usage and choose files to clean
+Exec="/home/q/Desktop/DiskCleaner/launch.sh"
+Icon=/home/q/Desktop/DiskCleaner/cachecat.xpm
+Terminal=true
+Categories=Utility;
