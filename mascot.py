@@ -136,7 +136,7 @@ class MascotAnimator:
         # Happy arched closed eyes (^^)
         for x in (6, 7, 8):
             self.base_pixbuf.copy_area(x, 8, 1, 1, f_happy1, x, 9)
-            self.base_pixbuf.copy_area(15, 16, 17, 1, f_happy1, x + 9, 9)
+            self.base_pixbuf.copy_area(x, 8, 1, 1, f_happy1, x + 9, 9)
         # Sparkles around head (yellow/cream dots)
         self.base_pixbuf.copy_area(7, 10, 1, 1, f_happy1, 2, 8)
         self.base_pixbuf.copy_area(7, 10, 1, 1, f_happy1, 21, 8)
@@ -145,7 +145,7 @@ class MascotAnimator:
         f_happy2 = self._copy()
         for x in (6, 7, 8):
             self.base_pixbuf.copy_area(x, 8, 1, 1, f_happy2, x, 9)
-            self.base_pixbuf.copy_area(15, 16, 17, 1, f_happy2, x + 9, 9)
+            self.base_pixbuf.copy_area(x, 8, 1, 1, f_happy2, x + 9, 9)
         # Sparkles shifted
         self.base_pixbuf.copy_area(7, 10, 1, 1, f_happy2, 1, 7)
         self.base_pixbuf.copy_area(7, 10, 1, 1, f_happy2, 22, 7)
