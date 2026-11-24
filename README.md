@@ -1,17 +1,7 @@
-# CacheCat · Cute & Powerful Disk Cleaner
+# CacheCat DiskCleaner utility · Cute & Powerful Disk Cleaner
 
 See what is taking up space on your Linux desktop, then choose what to remove. CacheCat is an adorable, animated disk cleaner featuring our expressive pixel-art cat companion who hunts down bloated caches, project build clutter, and large files.
 
-## Cute Cat Companion & Animations
-
-- **Interactive Mascot**: Click CacheCat anytime to get a friendly meow, tip, or cheerful encouragement in an adorable speech bubble.
-- **Expressive Multi-State Animations**:
-  - **Idle Purr**: Soft breathing, ear twitches, and gentle blinks while waiting.
-  - **Hunting Scan**: Active eye tracking darting left and right with alert whiskers as it searches for disk clutter.
-  - **Sweeping Clean**: Determined paw swipes with animated dust sparkles as files are tidied up.
-  - **Victory Celebration**: Happy smiling eyes `(^•ω•^)`, victory sparkles, and purrs when disk space is freed!
-- **Animated Disk Usage Gauge**: Smooth visual breakdown showing Used Space, Selected for Cleanup (pulsing highlight), and Free Space with live numeric updates.
-- **Motion Accessibility**: Honors your desktop's `gtk-enable-animations` setting.
 
 ## Features & Controls
 
